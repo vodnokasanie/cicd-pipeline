@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        // Ensure Jenkins sees Homebrew Node and Docker
-        PATH = "/usr/local/bin:/opt/homebrew/bin:$PATH"
+        // Add Node and Docker to PATH without removing system paths
+        PATH+EXTRA = "/usr/local/bin:/opt/homebrew/bin"
     }
 
     stages {
