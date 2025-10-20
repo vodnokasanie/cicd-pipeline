@@ -1,12 +1,14 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs "node"
+    environment {
+        // Add NodeJS bin to PATH without overwriting PATH
+        PATH = "/opt/homebrew/opt/node@20/bin:${env.PATH}"
     }
 
     stages {
-        stage('Checkout') {
+
+        stage('Checkout SCM') {
             steps {
                 checkout scm
             }
@@ -14,42 +16,40 @@ pipeline {
 
         stage('Install dependencies') {
             steps {
-                sh 'npm install'
+                // Use PATH+NODE so Jenkins won't break sh
+                withEnv(["PATH+NODE=/opt/homebrew/opt/node@20/bin:$PATH"]) {
+                    sh 'node -v'
+                    sh 'npm -v'
+                    sh 'npm install'
+                }
             }
         }
 
         stage('Test') {
             steps {
-                sh 'npm test'
+                withEnv(["PATH+NODE=/opt/homebrew/opt/node@20/bin:$PATH"]) {
+                    sh 'npm test'
+                }
             }
         }
 
         stage('Build Docker image') {
             steps {
-                script {
-                    if (env.BRANCH_NAME == 'main') {
-                        sh 'docker build -t nodemain:v1.0 .'
-                    } else if (env.BRANCH_NAME == 'dev') {
-                        sh 'docker build -t nodedev:v1.0 .'
-                    }
-                }
+                // Make sure docker is installed and in PATH
+                sh 'docker build -t nodedev:v1.0 .'
             }
         }
 
         stage('Run container') {
             steps {
-                script {
-                    sh '''
-                    docker ps -q | xargs -r docker stop
-                    docker container prune -f
-                    if [ "$BRANCH_NAME" = "main" ]; then
-                        docker run -d --expose 3000 -p 3000:3000 nodemain:v1.0
-                    else
-                        docker run -d --expose 3001 -p 3001:3000 nodedev:v1.0
-                    fi
-                    '''
-                }
+                sh 'docker run -d --name nodedev_container nodedev:v1.0'
             }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Pipeline finished.'
         }
     }
 }
