@@ -2,9 +2,7 @@ pipeline {
     agent any
     
     environment {
-        PATH = "/usr/local/bin:/opt/homebrew/bin:/bin:/usr/bin:/sbin:/usr/sbin:$PATH"
-        // Add NODE_HOME if you configured Node in Global Tool Configuration
-        // NODE_HOME = tool name: 'NodeJS-7.8.0', type: 'NodeJSInstallation'
+        PATH = "/opt/homebrew/opt/node@20/bin:/opt/homebrew/bin:/usr/local/bin:/bin:/usr/bin:/sbin:/usr/sbin:$PATH"
     }
     
     stages {
@@ -16,17 +14,19 @@ pipeline {
         
         stage('Install dependencies') {
             steps {
-                script {
-                    sh '#!/bin/bash\nnpm install'
-                }
+                sh '''#!/bin/bash
+                    node --version
+                    npm --version
+                    npm install
+                '''
             }
         }
         
         stage('Test') {
             steps {
-                script {
-                    sh '#!/bin/bash\nnpm test'
-                }
+                sh '''#!/bin/bash
+                    npm test
+                '''
             }
         }
         
@@ -35,7 +35,9 @@ pipeline {
                 script {
                     def branch = env.BRANCH_NAME ?: 'dev'
                     def imageName = branch == 'main' ? 'nodemain:v1.0' : 'nodedev:v1.0'
-                    sh "#!/bin/bash\ndocker build -t ${imageName} ."
+                    sh """#!/bin/bash
+                        docker build -t ${imageName} .
+                    """
                 }
             }
         }
@@ -48,14 +50,9 @@ pipeline {
                     def imageName = branch == 'main' ? 'nodemain:v1.0' : 'nodedev:v1.0'
                     def port = branch == 'main' ? '3000' : '3001'
                     
-                    // Stop and remove existing container (minimize downtime)
                     sh """#!/bin/bash
-                        docker stop ${containerName} || true
-                        docker rm ${containerName} || true
-                    """
-                    
-                    // Run new container
-                    sh """#!/bin/bash
+                        docker stop ${containerName} 2>/dev/null || true
+                        docker rm ${containerName} 2>/dev/null || true
                         docker run -d --name ${containerName} --expose ${port} -p ${port}:3000 ${imageName}
                     """
                 }
