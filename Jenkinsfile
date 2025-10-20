@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        // Add Node and Docker to PATH without removing system paths
-        PATH+EXTRA = "/usr/local/bin:/opt/homebrew/bin"
+        "PATH+EXTRA" = "/usr/local/bin:/opt/homebrew/bin"
     }
 
     stages {
